@@ -87,6 +87,8 @@ var Predictions = function() {
       var list = {};
       for (var m = 0; m < keyArray.length; ++m) {
         var key2 = keyArray[m];
+        if (key1.code == key2.code)
+          continue;
         if (SpecialKey(key2))
           continue;
         if (SquaredDistanceToEdge(/* key dimensions */
@@ -195,7 +197,7 @@ var Predictions = function() {
         // If the word is short, increase it greatly to filter out fuzzy
         // matches (e.g., "or" and "of" when typing "on"). If the word is long,
         // assume that user can mistype it (and allow fuzzy matches).
-        addNextCandidate(offset, result, 1 + 3 / result.length);
+        addNextCandidate(offset, result, 1.3);        
       return;
     }
 
@@ -244,6 +246,8 @@ var Predictions = function() {
   }
 
   function addNextCandidate(offset, prefix, multiplier) {
+    if (prefix.length == 0)
+      return;
     var node = Object.create(null);
     readNode(offset, node);
     var i = _candidates.length - 1;
@@ -256,7 +260,7 @@ var Predictions = function() {
     if (i == _candidates.length - 1 && _candidates.length >= _maxSuggestions)
       return;
     _candidates.splice(i + 1, 0, { node: node, prefix: prefix,
-      multiplier: multiplier, freq: node.freq * multiplier });
+      multiplier: multiplier, freq: freq });
   }
 
   function predictSuffixes() {
@@ -264,9 +268,14 @@ var Predictions = function() {
       var cand = _candidates.shift();
       var node = cand.node;
       var prefix = cand.prefix;
+      var multiplier = cand.multiplier;
       for (;;) {
-        if (node.nPtr) // Add the next best candidate
-          addNextCandidate(node.nPtr, prefix, cand.multiplier);
+        if (node.nPtr) { // Add the next best candidate
+          // we slowly decrease the multiplier to give
+          // other candidates a chance too
+          multiplier -= 0.2;
+          addNextCandidate(node.nPtr, prefix, ((multiplier > 1) ? multiplier : 1));
+        }
 
         if (node.ch == 0) // If the word ends here
           break;
@@ -286,12 +295,17 @@ var Predictions = function() {
   function predict(prefix) {
     if (!_dict || !_nearbyKeys)
       throw Error('not initialized');
-
+    var start = new Date().getTime();
     _suggestions = [];
     _candidates = [];
     _suggestions_index = Object.create(null);
     findFuzzy(1, '', prefix);
+
+    
     predictSuffixes();
+
+    var elapsed = new Date().getTime() - start;
+    dump(prefix + " : " + elapsed + " ms\n");
     return _suggestions;
   }
 
