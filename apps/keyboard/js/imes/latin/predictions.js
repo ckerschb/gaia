@@ -190,6 +190,7 @@ var Predictions = function() {
   var _candidates = [];
   var _suggestions_index = {}; // indexed by suggestion (to remove duplicates)
   var _diacritics = {}; // mapping from accented to non-accented letters
+  var _userInputLength; // length of the current user input
 
   // Send a log message to the main thread since we can't output to the console
   // directly.
@@ -428,7 +429,7 @@ var Predictions = function() {
         readNode(node.cPtr, node);
       }
       // Record the suggestion and move to the next best candidate
-      if (!(prefix in _suggestions_index)) {
+      if (!(prefix in _suggestions_index) && prefix.length >= _userInputLength) {
         _suggestions.push([prefix, cand.freq]);
         _suggestions_index[prefix] = true;
       }
@@ -439,6 +440,7 @@ var Predictions = function() {
     if (!_dict || !_nearbyKeys)
       throw Error('not initialized');
 
+    _userInputLength = prefix.length;
     _suggestions = [];
     _candidates = [];
     _suggestions_index = Object.create(null);

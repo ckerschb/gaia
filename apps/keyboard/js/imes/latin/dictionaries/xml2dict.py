@@ -520,7 +520,12 @@ def end_element(name):
         lastFlags == "abbreviation" or \
         lastFreq <= 1:
         return
-    tstRoot = tree.insert(tstRoot, lastWord + _EndOfWord, lastFreq)
+    multiplier = 2.0
+    if (len(lastWord) > 10):
+        multiplier = 1.0
+    else:
+        multiplier -= (len(lastWord.replace("-", "").replace("'","")) / 10)
+    tstRoot = tree.insert(tstRoot, lastWord + _EndOfWord, lastFreq * multiplier)
     _WordCounter += 1
     if _WordCounter % 10000 == 0:
         print("          >>> (" + str(_WordCounter) + " words read)")
